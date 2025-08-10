@@ -10,6 +10,27 @@ namespace Soenneker.Extensions.Responses.Operation;
 /// </summary>
 public static class OperationResponsesExtension
 {
+    private static IActionResult ToActionResultCore(bool succeeded, int statusCode, object? value, ProblemDetailsDto? problem)
+    {
+        if (succeeded)
+        {
+            if (statusCode == StatusCodes.Status204NoContent)
+                return new StatusCodeResult(StatusCodes.Status204NoContent);
+
+            // 2xx with body
+            return new ObjectResult(value) {StatusCode = statusCode == 0 ? StatusCodes.Status200OK : statusCode};
+        }
+
+        // Ensure a ProblemDetails exists
+        ProblemDetailsDto pd = problem ?? new ProblemDetailsDto
+        {
+            Title = "Unknown error",
+            Status = statusCode == 0 ? StatusCodes.Status500InternalServerError : statusCode
+        };
+
+        return new ObjectResult(pd) {StatusCode = pd.Status ?? statusCode};
+    }
+
     /// <summary>
     /// Converts the specified <see cref="OperationResponse{T}"/> into an <see cref="IActionResult"/> 
     /// suitable for use in ASP.NET Core MVC controllers.
@@ -35,31 +56,9 @@ public static class OperationResponsesExtension
     /// </item>
     /// </list>
     /// </returns>
-    public static IActionResult ToActionResult<T>(this OperationResponse<T> resp)
-    {
-        if (resp.Succeeded)
-        {
-            // 204 => no body
-            if (resp.StatusCode == StatusCodes.Status204NoContent)
-                return new StatusCodeResult(StatusCodes.Status204NoContent);
+    public static IActionResult ToActionResult<T>(this OperationResponse<T> resp) =>
+        ToActionResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem);
 
-            // Single allocation path for 2xx with body (200/201/202/…)
-            // If you don't need Location headers, ObjectResult is fine.
-            return new ObjectResult(resp.Value) {StatusCode = resp.StatusCode == 0 ? 200 : resp.StatusCode};
-        }
-
-        ProblemDetailsDto? problem = resp.Problem;
-
-        if (problem is null)
-        {
-            // Minimal construction only when missing.
-            problem = new ProblemDetailsDto
-            {
-                Title = "Unknown error",
-                Status = resp.StatusCode == 0 ? 500 : resp.StatusCode
-            };
-        }
-
-        return new ObjectResult(problem) {StatusCode = problem.Status ?? resp.StatusCode};
-    }
+    ///<inheritdoc cref="ToActionResult{T}"/>
+    public static IActionResult ToActionResult(this OperationResponse resp) => ToActionResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem);
 }
