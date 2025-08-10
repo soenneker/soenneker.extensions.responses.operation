@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Soenneker.Dtos.ProblemDetails;
 using Soenneker.Responses.Operation;
+using System;
 
 namespace Soenneker.Extensions.Responses.Operation;
 
@@ -61,4 +62,22 @@ public static class OperationResponsesExtension
 
     ///<inheritdoc cref="ToActionResult{T}"/>
     public static IActionResult ToActionResult(this OperationResponse resp) => ToActionResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem);
+
+    /// <summary>
+    /// If the response failed, retypes it to U and preserves StatusCode/Problem.
+    /// Throws if called on a successful response (use To/Map for that).
+    /// </summary>
+    public static OperationResponse<TOut> AsFailureOf<TOut, TIn>(this OperationResponse<TIn> resp)
+    {
+        if (resp.Succeeded)
+            throw new InvalidOperationException("AsFailureOf<> should only be used on failed responses.");
+
+        return new OperationResponse<TOut>
+        {
+            Succeeded = false,
+            StatusCode = resp.StatusCode,
+            Problem = resp.Problem,
+            Value = default
+        };
+    }
 }
