@@ -64,10 +64,10 @@ public static class OperationResponsesExtension
     public static IActionResult ToActionResult(this OperationResponse resp) => ToActionResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem);
 
     /// <summary>
-    /// If the response failed, retypes it to U and preserves StatusCode/Problem.
+    /// If the response failed, retypes it to TOut and preserves StatusCode/Problem.
     /// Throws if called on a successful response (use To/Map for that).
     /// </summary>
-    public static OperationResponse<TOut> AsFailureOf<TOut, TIn>(this OperationResponse<TIn> resp)
+    public static OperationResponse<TOut> ToFailure<TOut>(this OperationResponse resp)
     {
         if (resp.Succeeded)
             throw new InvalidOperationException("AsFailureOf<> should only be used on failed responses.");
